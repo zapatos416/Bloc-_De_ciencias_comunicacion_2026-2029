@@ -1,10 +1,10 @@
 /* ========================================== */
 /* ARCHIVO 3: app.js */
 /* ========================================== */
-import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, getDoc, setDoc, serverTimestamp, query, orderBy } from "firebase/firestore";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, getDoc, setDoc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyD8oLB_W2GoiXXQCr6wQyBlKc4I7vpFQQM",
@@ -24,7 +24,7 @@ const googleProvider = new GoogleAuthProvider();
 
 // CONFIGURACIÓN DE MODERADOR SUPREMO (IGNACIO)
 const SUPREME_MODERATOR_UID = "IGNACIO_ADMIN_UID_PLACEHOLDER"; 
-const SUPREME_MODERATOR_EMAIL = "ignacio@universidad.edu"; // Puedes añadir correos de confianza
+const SUPREME_MODERATOR_EMAIL = "ignacio@universidad.edu"; 
 
 let currentUser = null;
 let allPhotos = [];
@@ -80,12 +80,10 @@ onAuthStateChanged(auth, async (user) => {
         headerUserAvatar.src = user.photoURL || "https://via.placeholder.com/40";
         btnLogin.textContent = "Cerrar sesión";
         
-        // Verificar si es moderador supremo
         if (user.uid === SUPREME_MODERATOR_UID || user.email === SUPREME_MODERATOR_EMAIL) {
             navModeration.style.display = "flex";
         }
 
-        // Registrar o verificar perfil de usuario en Firestore (Control de cambio de nombre de 10 días)
         await checkOrCreateUserProfile(user);
     } else {
         currentUser = null;
@@ -124,7 +122,6 @@ navProfile.addEventListener("click", async (e) => {
         inputNewName.value = data.displayName;
         modalProfileAvatar.src = currentUser.photoURL;
 
-        // Validar cooldown de 10 días
         if (data.lastNamedChange) {
             const lastChangeDate = data.lastNamedChange.toDate();
             const daysPassed = (new Date() - lastChangeDate) / (1000 * 60 * 60 * 24);
@@ -213,16 +210,13 @@ uploadForm.addEventListener("submit", async (e) => {
     submitBtn.disabled = true;
 
     try {
-        // Subir a Storage
         const storageRef = ref(storage, `comunicasur/${Date.now()}_${file.name}`);
         await uploadBytes(storageRef, file);
         const downloadURL = await getDownloadURL(storageRef);
 
-        // Obtener nombre actual del usuario
         const userSnap = await getDoc(doc(db, "users", currentUser.uid));
         const authorName = userSnap.exists() ? userSnap.data().displayName : currentUser.displayName;
 
-        // Guardar en Firestore
         await addDoc(collection(db, "photos"), {
             imageUrl: downloadURL,
             description: desc,
@@ -245,7 +239,7 @@ uploadForm.addEventListener("submit", async (e) => {
     }
 });
 
-// CARGAR Y RENDERIZAR FOTOS (ESTILO GOOGLE FOTOS)
+// CARGAR Y RENDERIZAR FOTOS
 async function loadPhotos() {
     try {
         const q = query(collection(db, "photos"), orderBy("createdAt", "desc"));
@@ -309,7 +303,6 @@ function openLightbox(photo) {
     lightboxDesc.textContent = photo.description;
     btnViewFullSize.href = photo.imageUrl;
 
-    // Verificar si el usuario actual es el Moderador Supremo o el autor
     if (currentUser && (currentUser.uid === SUPREME_MODERATOR_UID || currentUser.email === SUPREME_MODERATOR_EMAIL || currentUser.uid === photo.authorUid)) {
         btnDeletePhoto.style.display = "flex";
     } else {
@@ -319,7 +312,7 @@ function openLightbox(photo) {
     lightboxModal.style.display = "flex";
 }
 
-// ELIMINAR FOTO (MODERADOR SUPREMO O DUEÑO)
+// ELIMINAR FOTO
 btnDeletePhoto.addEventListener("click", async () => {
     if (!confirm("¿Estás seguro de eliminar esta foto?")) return;
     try {
