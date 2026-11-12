@@ -1,25 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-
-  <head>
-<script type="importmap">
-{
-  "imports": {
-    "firebase": "https://esm.sh/firebase@^13.3.0",
-    "firebase/": "https://esm.sh/firebase@^13.3.0/"
-  }
-}
-</script>
-
-    <meta charset="UTF-8">
-    <title>Untitled</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="stylesheet" href="/style.css">
-
-
-  </head>
-
-  <body>
-    <!-- ========================================== -->
+<!-- ========================================== -->
 <!-- ARCHIVO 1: index.html -->
 <!-- ========================================== -->
 <!DOCTYPE html>
@@ -31,7 +10,7 @@
     <!-- Google Fonts & Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
 
@@ -103,7 +82,7 @@
             <form id="uploadForm">
                 <div class="file-drop-zone" id="dropZone">
                     <span class="material-symbols-outlined upload-cloud-icon">add_photo_alternate</span>
-                    <p>Toca para abrir la galería o arrastra tu foto aquí</p>
+                    <p>Toca para abrir la galería o selecciona tu foto</p>
                     <input type="file" id="fileInput" accept="image/*" required>
                 </div>
                 <div id="imagePreviewContainer" class="preview-hidden">
@@ -169,11 +148,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDKs y Script Principal -->
-    <script type="module" src="app.js"></script>
+    <!-- Script Principal -->
+    <script type="module" src="./app.js"></script>
 </body>
-</html>
-    <script type="module" src="/script.js"></script>
-  </body>
-
 </html>
