@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+<script type="importmap">
+{
+  "imports": {
+    "firebase": "https://esm.sh/firebase@^13.3.0",
+    "firebase/": "https://esm.sh/firebase@^13.3.0/"
+  }
+}
+</script>
+
+    <meta charset="UTF-8">
+    <title>Untitled</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="stylesheet" href="/style.css">
+
+
+  </head>
+
+  <body>
+    <!-- ========================================== -->
+<!-- ARCHIVO 1: index.html -->
+<!-- ========================================== -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ComunicaSur 26-29 | Google Photos Style</title>
+    <!-- Google Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <!-- BARRA DE NAVEGACIÓN SUPERIOR -->
+    <header class="top-bar">
+        <div class="logo-area">
+            <span class="material-symbols-outlined logo-icon">photo_library</span>
+            <h1>ComunicaSur <span class="badge-gen">26-29</span></h1>
+        </div>
+        
+        <div class="search-bar-container">
+            <span class="material-symbols-outlined">search</span>
+            <input type="text" id="searchInput" placeholder="Buscar fotos, descripciones o autores...">
+        </div>
+
+        <div class="user-nav-area">
+            <button id="btnOpenUpload" class="action-btn upload-btn" title="Subir foto desde la galería">
+                <span class="material-symbols-outlined">add_a_photo</span>
+                <span>Subir</span>
+            </button>
+            <div id="userProfileArea" class="user-profile-widget">
+                <img id="headerUserAvatar" src="https://via.placeholder.com/40" alt="Avatar">
+                <span id="headerUserName">Invitado</span>
+                <button id="btnLogin" class="login-btn">Acceder</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- CONTENEDOR PRINCIPAL -->
+    <div class="main-layout">
+        <!-- BARRA LATERAL -->
+        <aside class="sidebar">
+            <nav>
+                <a href="#" class="nav-item active">
+                    <span class="material-symbols-outlined">photos</span>
+                    <span>Fotos</span>
+                </a>
+                <a href="#" class="nav-item" id="navProfile">
+                    <span class="material-symbols-outlined">account_circle</span>
+                    <span>Mi Perfil y Nombre</span>
+                </a>
+                <a href="#" class="nav-item" id="navModeration" style="display: none;">
+                    <span class="material-symbols-outlined">security</span>
+                    <span>Panel Moderador Supremo</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- GALERÍA ESTILO GOOGLE FOTOS -->
+        <main class="content-area">
+            <div class="welcome-banner">
+                <h2>Universidad del Sur - Ciencias de la Comunicación</h2>
+                <p>Generación 2026-2029 • Recuerdos y momentos universitarios</p>
+            </div>
+
+            <div id="photoGrid" class="google-photo-grid">
+                <!-- Las tarjetas de fotos se inyectan dinámicamente aquí -->
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL DE SUBIR FOTO (GALERÍA DEL CELULAR) -->
+    <div id="uploadModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Subir Recuerdo</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <form id="uploadForm">
+                <div class="file-drop-zone" id="dropZone">
+                    <span class="material-symbols-outlined upload-cloud-icon">add_photo_alternate</span>
+                    <p>Toca para abrir la galería o arrastra tu foto aquí</p>
+                    <input type="file" id="fileInput" accept="image/*" required>
+                </div>
+                <div id="imagePreviewContainer" class="preview-hidden">
+                    <img id="imagePreview" src="" alt="Vista previa">
+                </div>
+                <div class="form-group">
+                    <label for="photoDescription">Descripción de la foto</label>
+                    <textarea id="photoDescription" placeholder="¿Qué momento estamos viendo hoy?" rows="3" required></textarea>
+                </div>
+                <button type="submit" class="btn-primary" id="btnSubmitPhoto">Publicar en el Blog</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL DE VER FOTO GRANDE (LIGHTBOX GOOGLE FOTOS) -->
+    <div id="lightboxModal" class="lightbox">
+        <button class="lightbox-close">&times;</button>
+        <div class="lightbox-container">
+            <div class="lightbox-img-box">
+                <img id="lightboxImg" src="" alt="Foto ampliada">
+            </div>
+            <div class="lightbox-sidebar">
+                <div class="lightbox-author-info">
+                    <img id="lightboxAvatar" src="" alt="Autor">
+                    <div>
+                        <h4 id="lightboxAuthorName">Nombre</h4>
+                        <span id="lightboxDate">Fecha</span>
+                    </div>
+                </div>
+                <div class="lightbox-desc-box">
+                    <p id="lightboxDesc">Descripción...</p>
+                </div>
+                <div class="lightbox-actions">
+                    <a id="btnViewFullSize" href="#" target="_blank" class="action-sub-btn">
+                        <span class="material-symbols-outlined">open_in_new</span> Ver foto tamaño real
+                    </a>
+                    <button id="btnDeletePhoto" class="action-sub-btn delete-btn" style="display: none;">
+                        <span class="material-symbols-outlined">delete</span> Eliminar (Moderador Supremo)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE PERFIL Y CAMBIO DE NOMBRE (REGLA 10 DÍAS) -->
+    <div id="profileModal" class="modal">
+        <div class="modal-content small-modal">
+            <div class="modal-header">
+                <h3>Configuración de Perfil</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="profile-settings-body">
+                <div class="avatar-edit-box">
+                    <img id="modalProfileAvatar" src="" alt="Avatar actual">
+                </div>
+                <div class="form-group">
+                    <label for="inputNewName">Tu Nombre en el Blog</label>
+                    <input type="text" id="inputNewName" placeholder="Escribe tu nombre completo o apodo">
+                    <small id="nameCooldownNotice" class="cooldown-text">Podrás volver a cambiar tu nombre en X días.</small>
+                </div>
+                <button id="btnSaveProfile" class="btn-primary">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs y Script Principal -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>
+    <script type="module" src="/script.js"></script>
+  </body>
+
+</html>
