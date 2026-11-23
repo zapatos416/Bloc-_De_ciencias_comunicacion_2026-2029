@@ -290,7 +290,6 @@ body {
     color: var(--text-secondary);
 }
 
-/* MODALS (OCULTOS POR DEFECTO) */
 .modal {
     display: none;
     position: fixed;
@@ -420,7 +419,6 @@ body {
     cursor: not-allowed;
 }
 
-/* LIGHTBOX (OCULTO POR DEFECTO) */
 .lightbox {
     display: none;
     position: fixed;
