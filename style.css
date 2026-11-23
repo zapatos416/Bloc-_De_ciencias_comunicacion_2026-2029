@@ -28,6 +28,7 @@ body {
     min-height: 100vh;
 }
 
+/* TOP BAR */
 .top-bar {
     height: 64px;
     background-color: var(--surface-color);
@@ -159,6 +160,11 @@ body {
     font-size: 13px;
 }
 
+.login-btn:hover {
+    background: var(--primary-hover);
+}
+
+/* LAYOUT */
 .main-layout {
     display: flex;
     flex: 1;
@@ -223,6 +229,7 @@ body {
     font-size: 14px;
 }
 
+/* GOOGLE PHOTOS GRID */
 .google-photo-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -290,6 +297,7 @@ body {
     color: var(--text-secondary);
 }
 
+/* MODALS */
 .modal {
     display: none;
     position: fixed;
@@ -414,11 +422,16 @@ body {
     cursor: pointer;
 }
 
+.btn-primary:hover {
+    background: var(--primary-hover);
+}
+
 .btn-primary:disabled {
     opacity: 0.6;
     cursor: not-allowed;
 }
 
+/* LIGHTBOX */
 .lightbox {
     display: none;
     position: fixed;
