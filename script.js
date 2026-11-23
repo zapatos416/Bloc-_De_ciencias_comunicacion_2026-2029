@@ -1,19 +1,22 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, getDoc, setDoc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyD8oLB_W2GoiXXQCr6wQyBlKc4I7vpFQQM",
-    authDomain: "bloc-de-la-universidad-del-su.firebaseapp.com",
-    projectId: "bloc-de-la-universidad-del-su",
-    storageBucket: "bloc-de-la-universidad-del-su.firebasestorage.app",
-    messagingSenderId: "814092933337",
-    appId: "1:814092933337:web:ee3e0b56057415708646c8",
-    measurementId: "G-QBX16WGN2B"
+  apiKey: "AIzaSyDzYW_VBvV5JbDjHuVfvdmnhr-MWsicjug",
+  authDomain: "fotos-70bcb.firebaseapp.com",
+  projectId: "fotos-70bcb",
+  storageBucket: "fotos-70bcb.firebasestorage.app",
+  messagingSenderId: "347643542550",
+  appId: "1:347643542550:web:e0edd7af9eb5bf4513c937",
+  measurementId: "G-8N7KDW43LM"
 };
 
 const app = initializeApp(firebaseConfig);
+getAnalytics(app);
+
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
