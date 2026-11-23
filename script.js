@@ -1,6 +1,3 @@
-/* ========================================== */
-/* ARCHIVO 3: app.js */
-/* ========================================== */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, getDoc, setDoc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -22,17 +19,14 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 const googleProvider = new GoogleAuthProvider();
 
-// CONFIGURACIÓN DE MODERADOR SUPREMO (IGNACIO)
-const SUPREME_MODERATOR_UID = "IGNACIO_ADMIN_UID_PLACEHOLDER"; 
-const SUPREME_MODERATOR_EMAIL = "ignacio@universidad.edu"; 
+const SUPREME_MODERATOR_EMAIL = "jose.ignacio.ramirez.lizarraga@gmail.com";
 
 let currentUser = null;
 let allPhotos = [];
 let currentActivePhotoId = null;
-let currentActivePhotoUrl = null;
 
-// ELEMENTOS DOM
 const photoGrid = document.getElementById("photoGrid");
+const statusToast = document.getElementById("statusToast");
 const btnLogin = document.getElementById("btnLogin");
 const headerUserName = document.getElementById("headerUserName");
 const headerUserAvatar = document.getElementById("headerUserAvatar");
@@ -60,31 +54,43 @@ const lightboxDesc = document.getElementById("lightboxDesc");
 const btnViewFullSize = document.getElementById("btnViewFullSize");
 const btnDeletePhoto = document.getElementById("btnDeletePhoto");
 
-// GESTIÓN DE AUTENTICACIÓN
+function showToast(msg, isError = false) {
+    statusToast.textContent = msg;
+    statusToast.style.display = "block";
+    statusToast.style.background = isError ? "#fce8e6" : "#e8f0fe";
+    statusToast.style.color = isError ? "#a50e0e" : "#174ea6";
+    setTimeout(() => {
+        statusToast.style.display = "none";
+    }, 4000);
+}
+
+function isSupremeMod(user) {
+    return Boolean(user && user.email && user.email.toLowerCase() === SUPREME_MODERATOR_EMAIL.toLowerCase());
+}
+
 btnLogin.addEventListener("click", async () => {
-    if (!currentUser) {
-        try {
+    try {
+        if (!currentUser) {
             await signInWithPopup(auth, googleProvider);
-        } catch (error) {
-            console.error("Error al iniciar sesión:", error);
+        } else {
+            await signOut(auth);
         }
-    } else {
-        await signOut(auth);
+    } catch (error) {
+        console.error("Error de autenticación:", error);
+        showToast("Error al iniciar/cerrar sesión. Revisa dominios autorizados en Firebase.", true);
     }
 });
 
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         currentUser = user;
-        headerUserName.textContent = user.displayName || "Estudiante";
-        headerUserAvatar.src = user.photoURL || "https://via.placeholder.com/40";
         btnLogin.textContent = "Cerrar sesión";
-        
-        if (user.uid === SUPREME_MODERATOR_UID || user.email === SUPREME_MODERATOR_EMAIL) {
-            navModeration.style.display = "flex";
-        }
-
+        navModeration.style.display = isSupremeMod(user) ? "flex" : "none";
         await checkOrCreateUserProfile(user);
+        const userSnap = await getDoc(doc(db, "users", user.uid));
+        const profileName = userSnap.exists() && userSnap.data().displayName ? userSnap.data().displayName : (user.displayName || "Estudiante");
+        headerUserName.textContent = profileName;
+        headerUserAvatar.src = user.photoURL || "https://via.placeholder.com/40";
     } else {
         currentUser = null;
         headerUserName.textContent = "Invitado";
@@ -95,15 +101,13 @@ onAuthStateChanged(auth, async (user) => {
     loadPhotos();
 });
 
-// CONTROL DE PERFIL Y REGLA DE 10 DÍAS
 async function checkOrCreateUserProfile(user) {
     const userRef = doc(db, "users", user.uid);
     const userSnap = await getDoc(userRef);
-
     if (!userSnap.exists()) {
         await setDoc(userRef, {
             displayName: user.displayName || "Estudiante",
-            photoURL: user.photoURL,
+            photoURL: user.photoURL || "",
             lastNamedChange: null
         });
     }
@@ -112,26 +116,26 @@ async function checkOrCreateUserProfile(user) {
 navProfile.addEventListener("click", async (e) => {
     e.preventDefault();
     if (!currentUser) {
-        alert("Inicia sesión para editar tu perfil.");
+        showToast("Inicia sesión con Google para editar tu perfil.", true);
         return;
     }
     const userRef = doc(db, "users", currentUser.uid);
     const userSnap = await getDoc(userRef);
     if (userSnap.exists()) {
         const data = userSnap.data();
-        inputNewName.value = data.displayName;
-        modalProfileAvatar.src = currentUser.photoURL;
+        inputNewName.value = data.displayName || currentUser.displayName || "";
+        modalProfileAvatar.src = currentUser.photoURL || "https://via.placeholder.com/80";
 
-        if (data.lastNamedChange) {
+        if (data.lastNamedChange && typeof data.lastNamedChange.toDate === "function") {
             const lastChangeDate = data.lastNamedChange.toDate();
-            const daysPassed = (new Date() - lastChangeDate) / (1000 * 60 * 60 * 24);
+            const daysPassed = (Date.now() - lastChangeDate.getTime()) / (1000 * 60 * 60 * 24);
             if (daysPassed < 10) {
                 const daysRemaining = Math.ceil(10 - daysPassed);
-                nameCooldownNotice.textContent = `Faltan ${daysRemaining} días para que puedas volver a cambiar tu nombre.`;
+                nameCooldownNotice.textContent = `Faltan ${daysRemaining} día(s) para volver a cambiar tu nombre.`;
                 inputNewName.disabled = true;
                 btnSaveProfile.disabled = true;
             } else {
-                nameCooldownNotice.textContent = "Puedes actualizar tu nombre (límite de 1 vez cada 10 días).";
+                nameCooldownNotice.textContent = "Puedes actualizar tu nombre (1 vez cada 10 días).";
                 inputNewName.disabled = false;
                 btnSaveProfile.disabled = false;
             }
@@ -141,17 +145,16 @@ navProfile.addEventListener("click", async (e) => {
             btnSaveProfile.disabled = false;
         }
     }
-    profileModal.style.display = "flex";
+    profileModal.classList.add("open");
 });
 
 btnSaveProfile.addEventListener("click", async () => {
     if (!currentUser) return;
     const newName = inputNewName.value.trim();
     if (!newName) {
-        alert("El nombre no puede estar vacío.");
+        showToast("El nombre no puede estar vacío.", true);
         return;
     }
-
     const userRef = doc(db, "users", currentUser.uid);
     await setDoc(userRef, {
         displayName: newName,
@@ -159,44 +162,51 @@ btnSaveProfile.addEventListener("click", async () => {
     }, { merge: true });
 
     headerUserName.textContent = newName;
-    alert("¡Nombre actualizado con éxito!");
-    profileModal.style.display = "none";
+    profileModal.classList.remove("open");
+    showToast("Nombre actualizado con éxito.");
 });
 
-// ABRIR / CERRAR MODALES
 btnOpenUpload.addEventListener("click", () => {
     if (!currentUser) {
-        alert("Debes iniciar sesión con Google para subir fotos.");
+        showToast("Debes iniciar sesión con Google para subir fotos.", true);
         return;
     }
-    uploadModal.style.display = "flex";
+    uploadModal.classList.add("open");
 });
 
 document.querySelectorAll(".close-modal").forEach(btn => {
     btn.addEventListener("click", () => {
-        uploadModal.style.display = "none";
-        profileModal.style.display = "none";
+        uploadModal.classList.remove("open");
+        profileModal.classList.remove("open");
     });
 });
 
 document.querySelector(".lightbox-close").addEventListener("click", () => {
-    lightboxModal.style.display = "none";
+    lightboxModal.classList.remove("open");
 });
 
-// VISTA PREVIA DE FOTO SELECCIONADA DE LA GALERÍA
+[uploadModal, profileModal].forEach(modal => {
+    modal.addEventListener("click", (e) => {
+        if (e.target === modal) modal.classList.remove("open");
+    });
+});
+
+lightboxModal.addEventListener("click", (e) => {
+    if (e.target === lightboxModal) lightboxModal.classList.remove("open");
+});
+
 fileInput.addEventListener("change", (e) => {
     const file = e.target.files[0];
     if (file) {
         const reader = new FileReader();
         reader.onload = (event) => {
             imagePreview.src = event.target.result;
-            imagePreviewContainer.style.display = "block";
+            imagePreviewContainer.classList.add("visible");
         };
         reader.readAsDataURL(file);
     }
 });
 
-// SUBIR FOTO A FIREBASE STORAGE Y FIRESTORE
 uploadForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     if (!currentUser) return;
@@ -210,36 +220,37 @@ uploadForm.addEventListener("submit", async (e) => {
     submitBtn.disabled = true;
 
     try {
-        const storageRef = ref(storage, `comunicasur/${Date.now()}_${file.name}`);
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const storageRef = ref(storage, `comunicasur/${Date.now()}_${safeName}`);
         await uploadBytes(storageRef, file);
         const downloadURL = await getDownloadURL(storageRef);
 
         const userSnap = await getDoc(doc(db, "users", currentUser.uid));
-        const authorName = userSnap.exists() ? userSnap.data().displayName : currentUser.displayName;
+        const authorName = (userSnap.exists() && userSnap.data().displayName) || currentUser.displayName || "Estudiante";
 
         await addDoc(collection(db, "photos"), {
             imageUrl: downloadURL,
             description: desc,
-            authorName: authorName,
+            authorName,
             authorUid: currentUser.uid,
             authorAvatar: currentUser.photoURL || "https://via.placeholder.com/40",
             createdAt: serverTimestamp()
         });
 
-        uploadModal.style.display = "none";
+        uploadModal.classList.remove("open");
         uploadForm.reset();
-        imagePreviewContainer.style.display = "none";
-        loadPhotos();
+        imagePreviewContainer.classList.remove("visible");
+        showToast("Foto publicada en el blog.");
+        await loadPhotos();
     } catch (error) {
         console.error("Error al subir foto:", error);
-        alert("Hubo un error al subir la foto.");
+        showToast("Error al subir la foto. Verifica permisos de Storage/Firestore.", true);
     } finally {
         submitBtn.textContent = "Publicar en el Blog";
         submitBtn.disabled = false;
     }
 });
 
-// CARGAR Y RENDERIZAR FOTOS
 async function loadPhotos() {
     try {
         const q = query(collection(db, "photos"), orderBy("createdAt", "desc"));
@@ -251,6 +262,7 @@ async function loadPhotos() {
         renderPhotos(allPhotos);
     } catch (error) {
         console.error("Error cargando fotos:", error);
+        renderPhotos([]);
     }
 }
 
@@ -264,63 +276,72 @@ function renderPhotos(photosToRender) {
     photosToRender.forEach(photo => {
         const card = document.createElement("div");
         card.className = "photo-card";
-        card.innerHTML = `
-            <div class="photo-card-img-wrap">
-                <img src="${photo.imageUrl}" alt="Recuerdo comunicación" loading="lazy">
-            </div>
-            <div class="photo-card-footer">
-                <img src="${photo.authorAvatar}" alt="Autor">
-                <div class="photo-card-meta">
-                    <h5>${photo.authorName}</h5>
-                    <p>${photo.description.substring(0, 35)}...</p>
-                </div>
-            </div>
-        `;
+
+        const imgWrap = document.createElement("div");
+        imgWrap.className = "photo-card-img-wrap";
+        const img = document.createElement("img");
+        img.src = photo.imageUrl || "";
+        img.alt = photo.description || "Recuerdo comunicación";
+        img.loading = "lazy";
+        imgWrap.appendChild(img);
+
+        const footer = document.createElement("div");
+        footer.className = "photo-card-footer";
+        const avatar = document.createElement("img");
+        avatar.src = photo.authorAvatar || "https://via.placeholder.com/40";
+        avatar.alt = photo.authorName || "Autor";
+
+        const meta = document.createElement("div");
+        meta.className = "photo-card-meta";
+        const h5 = document.createElement("h5");
+        h5.textContent = photo.authorName || "Estudiante";
+        const p = document.createElement("p");
+        const descText = photo.description || "";
+        p.textContent = descText.length > 35 ? `${descText.slice(0, 35)}...` : descText;
+
+        meta.append(h5, p);
+        footer.append(avatar, meta);
+        card.append(imgWrap, footer);
         card.addEventListener("click", () => openLightbox(photo));
         photoGrid.appendChild(card);
     });
 }
 
-// BUSCADOR EN TIEMPO REAL
 searchInput.addEventListener("input", (e) => {
     const term = e.target.value.toLowerCase();
-    const filtered = allPhotos.filter(p => 
-        p.description.toLowerCase().includes(term) || 
-        p.authorName.toLowerCase().includes(term)
+    const filtered = allPhotos.filter(p =>
+        (p.description || "").toLowerCase().includes(term) ||
+        (p.authorName || "").toLowerCase().includes(term)
     );
     renderPhotos(filtered);
 });
 
-// LIGHTBOX (VER FOTO GRANDE)
 function openLightbox(photo) {
     currentActivePhotoId = photo.id;
-    currentActivePhotoUrl = photo.imageUrl;
+    lightboxImg.src = photo.imageUrl || "";
+    lightboxAvatar.src = photo.authorAvatar || "https://via.placeholder.com/40";
+    lightboxAuthorName.textContent = photo.authorName || "Estudiante";
+    lightboxDate.textContent = (photo.createdAt && typeof photo.createdAt.toDate === "function")
+        ? photo.createdAt.toDate().toLocaleDateString()
+        : "Recién subida";
+    lightboxDesc.textContent = photo.description || "";
+    btnViewFullSize.href = photo.imageUrl || "#";
 
-    lightboxImg.src = photo.imageUrl;
-    lightboxAvatar.src = photo.authorAvatar;
-    lightboxAuthorName.textContent = photo.authorName;
-    lightboxDate.textContent = photo.createdAt ? new Date(photo.createdAt.toDate()).toLocaleDateString() : "Recién subida";
-    lightboxDesc.textContent = photo.description;
-    btnViewFullSize.href = photo.imageUrl;
+    const canDelete = Boolean(currentUser && (isSupremeMod(currentUser) || currentUser.uid === photo.authorUid));
+    btnDeletePhoto.style.display = canDelete ? "flex" : "none";
 
-    if (currentUser && (currentUser.uid === SUPREME_MODERATOR_UID || currentUser.email === SUPREME_MODERATOR_EMAIL || currentUser.uid === photo.authorUid)) {
-        btnDeletePhoto.style.display = "flex";
-    } else {
-        btnDeletePhoto.style.display = "none";
-    }
-
-    lightboxModal.style.display = "flex";
+    lightboxModal.classList.add("open");
 }
 
-// ELIMINAR FOTO
 btnDeletePhoto.addEventListener("click", async () => {
-    if (!confirm("¿Estás seguro de eliminar esta foto?")) return;
+    if (!currentActivePhotoId) return;
     try {
         await deleteDoc(doc(db, "photos", currentActivePhotoId));
-        lightboxModal.style.display = "none";
-        loadPhotos();
-        alert("Foto eliminada correctamente.");
+        lightboxModal.classList.remove("open");
+        showToast("Foto eliminada correctamente.");
+        await loadPhotos();
     } catch (error) {
         console.error("Error al eliminar foto:", error);
+        showToast("No se pudo eliminar la foto.", true);
     }
 });
