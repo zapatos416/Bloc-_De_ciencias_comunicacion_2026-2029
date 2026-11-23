@@ -15,7 +15,11 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-getAnalytics(app);
+try {
+    getAnalytics(app);
+} catch (e) {
+    // Analytics puede no aplicar en entornos sin medición activa
+}
 
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -64,7 +68,7 @@ function showToast(msg, isError = false) {
     statusToast.style.color = isError ? "#a50e0e" : "#174ea6";
     setTimeout(() => {
         statusToast.style.display = "none";
-    }, 4000);
+    }, 4500);
 }
 
 function isSupremeMod(user) {
@@ -80,7 +84,13 @@ btnLogin.addEventListener("click", async () => {
         }
     } catch (error) {
         console.error("Error de autenticación:", error);
-        showToast("Error al iniciar/cerrar sesión. Revisa dominios autorizados en Firebase.", true);
+        if (error && error.code === "auth/unauthorized-domain") {
+            showToast("Dominio no autorizado en Firebase. Agrega zapatos416.github.io en Authentication > Settings > Authorized domains.", true);
+        } else if (error && error.code === "auth/configuration-not-found") {
+            showToast("Activa Firebase Authentication y el proveedor Google en Firebase Console.", true);
+        } else {
+            showToast(`Error al iniciar/cerrar sesión (${error.code || "auth"}).`, true);
+        }
     }
 });
 
@@ -89,11 +99,18 @@ onAuthStateChanged(auth, async (user) => {
         currentUser = user;
         btnLogin.textContent = "Cerrar sesión";
         navModeration.style.display = isSupremeMod(user) ? "flex" : "none";
-        await checkOrCreateUserProfile(user);
-        const userSnap = await getDoc(doc(db, "users", user.uid));
-        const profileName = userSnap.exists() && userSnap.data().displayName ? userSnap.data().displayName : (user.displayName || "Estudiante");
-        headerUserName.textContent = profileName;
+        headerUserName.textContent = user.displayName || "Estudiante";
         headerUserAvatar.src = user.photoURL || "https://via.placeholder.com/40";
+
+        try {
+            await checkOrCreateUserProfile(user);
+            const userSnap = await getDoc(doc(db, "users", user.uid));
+            if (userSnap.exists() && userSnap.data().displayName) {
+                headerUserName.textContent = userSnap.data().displayName;
+            }
+        } catch (error) {
+            console.warn("No se pudo leer/crear perfil en Firestore:", error);
+        }
     } else {
         currentUser = null;
         headerUserName.textContent = "Invitado";
@@ -122,15 +139,14 @@ navProfile.addEventListener("click", async (e) => {
         showToast("Inicia sesión con Google para editar tu perfil.", true);
         return;
     }
-    const userRef = doc(db, "users", currentUser.uid);
-    const userSnap = await getDoc(userRef);
-    if (userSnap.exists()) {
-        const data = userSnap.data();
-        inputNewName.value = data.displayName || currentUser.displayName || "";
+    try {
+        const userRef = doc(db, "users", currentUser.uid);
+        const userSnap = await getDoc(userRef);
+        inputNewName.value = (userSnap.exists() && userSnap.data().displayName) || currentUser.displayName || "";
         modalProfileAvatar.src = currentUser.photoURL || "https://via.placeholder.com/80";
 
-        if (data.lastNamedChange && typeof data.lastNamedChange.toDate === "function") {
-            const lastChangeDate = data.lastNamedChange.toDate();
+        if (userSnap.exists() && userSnap.data().lastNamedChange && typeof userSnap.data().lastNamedChange.toDate === "function") {
+            const lastChangeDate = userSnap.data().lastNamedChange.toDate();
             const daysPassed = (Date.now() - lastChangeDate.getTime()) / (1000 * 60 * 60 * 24);
             if (daysPassed < 10) {
                 const daysRemaining = Math.ceil(10 - daysPassed);
@@ -147,8 +163,11 @@ navProfile.addEventListener("click", async (e) => {
             inputNewName.disabled = false;
             btnSaveProfile.disabled = false;
         }
+        profileModal.classList.add("open");
+    } catch (error) {
+        console.error("Error al abrir perfil:", error);
+        showToast("No se pudo cargar el perfil. Revisa las reglas de Firestore.", true);
     }
-    profileModal.classList.add("open");
 });
 
 btnSaveProfile.addEventListener("click", async () => {
@@ -158,15 +177,20 @@ btnSaveProfile.addEventListener("click", async () => {
         showToast("El nombre no puede estar vacío.", true);
         return;
     }
-    const userRef = doc(db, "users", currentUser.uid);
-    await setDoc(userRef, {
-        displayName: newName,
-        lastNamedChange: serverTimestamp()
-    }, { merge: true });
+    try {
+        const userRef = doc(db, "users", currentUser.uid);
+        await setDoc(userRef, {
+            displayName: newName,
+            lastNamedChange: serverTimestamp()
+        }, { merge: true });
 
-    headerUserName.textContent = newName;
-    profileModal.classList.remove("open");
-    showToast("Nombre actualizado con éxito.");
+        headerUserName.textContent = newName;
+        profileModal.classList.remove("open");
+        showToast("Nombre actualizado con éxito.");
+    } catch (error) {
+        console.error("Error al guardar perfil:", error);
+        showToast("No se pudo guardar el nombre. Revisa las reglas de Firestore.", true);
+    }
 });
 
 btnOpenUpload.addEventListener("click", () => {
@@ -228,8 +252,13 @@ uploadForm.addEventListener("submit", async (e) => {
         await uploadBytes(storageRef, file);
         const downloadURL = await getDownloadURL(storageRef);
 
-        const userSnap = await getDoc(doc(db, "users", currentUser.uid));
-        const authorName = (userSnap.exists() && userSnap.data().displayName) || currentUser.displayName || "Estudiante";
+        let authorName = currentUser.displayName || "Estudiante";
+        try {
+            const userSnap = await getDoc(doc(db, "users", currentUser.uid));
+            if (userSnap.exists() && userSnap.data().displayName) {
+                authorName = userSnap.data().displayName;
+            }
+        } catch (_) {}
 
         await addDoc(collection(db, "photos"), {
             imageUrl: downloadURL,
@@ -247,7 +276,7 @@ uploadForm.addEventListener("submit", async (e) => {
         await loadPhotos();
     } catch (error) {
         console.error("Error al subir foto:", error);
-        showToast("Error al subir la foto. Verifica permisos de Storage/Firestore.", true);
+        showToast("Error al subir la foto. Verifica reglas de Storage y Firestore.", true);
     } finally {
         submitBtn.textContent = "Publicar en el Blog";
         submitBtn.disabled = false;
@@ -264,7 +293,7 @@ async function loadPhotos() {
         });
         renderPhotos(allPhotos);
     } catch (error) {
-        console.error("Error cargando fotos:", error);
+        console.warn("Error cargando fotos (revisa reglas de Firestore):", error);
         renderPhotos([]);
     }
 }
